@@ -1,0 +1,682 @@
+import { useState, useRef, useCallback, useEffect } from "react";
+
+const ACCENT = "#00e0d0";
+const FEEDS = [
+  { id: "jobs", accent: "#00e0d0", label: "LABOR" },
+  { id: "eyes", accent: "#ff4d6a", label: "SIGINT" },
+  { id: "reshuffling", accent: "#f0a030", label: "HUMINT" },
+  { id: "coral", accent: "#a78bfa", label: "ARTINT" },
+  { id: "port", accent: "#3b9eff", label: "MARITIME" },
+];
+
+const PAGES = [
+  { id: "cover", isCover: true },
+  {
+    id: "jobs", tag: "01 — LABOR", title: "Live Jobs",
+    desc: "Employment analytics across Miami-Dade & Broward. Real-time BLS data, sector hiring velocity, and workforce demand mapping.",
+    accent: "#00e0d0", status: "LIVE", source: "Miami Gov API", updated: "3 min ago",
+    url: "#", linkLabel: "Enter Dashboard",
+    stats: [{ label: "Open Roles", value: "12,847" }, { label: "Avg Salary", value: "$68K" }, { label: "Growth", value: "+4.2%" }],
+    bars: [72, 58, 85, 44, 91, 66, 78, 53, 89, 62, 74, 80], barLabel: "Hiring by Sector (12mo)",
+    thumbLabel: "Employment Hotspot Map",
+    bgImage: "https://images.unsplash.com/photo-1589083130544-0d6a2926e519?w=600&q=70",
+  },
+  {
+    id: "eyes", tag: "02 — SIGINT", title: "The Eyes",
+    desc: "Live monitoring feeds and open-source intelligence streams. Visual observation channels aggregated from public networks.",
+    accent: "#ff4d6a", status: "ACTIVE", source: "OSINT Network", updated: "Live",
+    url: "#", linkLabel: "Open Feed",
+    stats: [{ label: "Feeds", value: "24" }, { label: "Regions", value: "6" }, { label: "Alerts", value: "3" }],
+    bars: [90, 82, 75, 88, 60, 95, 70, 85, 78, 92, 68, 87], barLabel: "Feed Activity (24hr)",
+    thumbLabel: "Live Observation Grid",
+    bgImage: "https://images.unsplash.com/photo-1558618666-fcd25c85f82e?w=600&q=70",
+  },
+  {
+    id: "reshuffling", tag: "03 — HUMINT", title: "The Great Reshuffling",
+    desc: "Editorial intelligence on the tectonic shift in tech careers. Role displacement patterns, emergence signals, and adaptation metrics.",
+    accent: "#f0a030", status: "PUBLISHED", source: "BLS / Field Reports", updated: "2 days ago",
+    url: "#", linkLabel: "Read Brief",
+    stats: [{ label: "Roles Tracked", value: "340" }, { label: "Displaced", value: "18%" }, { label: "Emerging", value: "62" }],
+    bars: [45, 52, 38, 65, 72, 80, 55, 48, 90, 60, 42, 76], barLabel: "Role Evolution Index",
+    thumbLabel: "Industry Shift Analysis",
+    bgImage: "https://images.unsplash.com/photo-1504384308090-c894fdcc538d?w=600&q=70",
+  },
+  {
+    id: "coral", tag: "04 — ARTINT", title: "Coral AI",
+    desc: "Autonomous career intelligence agent. AI-driven pathway analysis, skills gap detection, and strategic employment guidance.",
+    accent: "#a78bfa", status: "ONLINE", source: "Coral Engine v2", updated: "Always on",
+    url: "#", linkLabel: "Activate Agent",
+    stats: [{ label: "Pathways", value: "1,200+" }, { label: "Accuracy", value: "94%" }, { label: "Users", value: "850" }],
+    bars: [60, 70, 75, 82, 78, 88, 84, 90, 86, 92, 88, 95], barLabel: "Model Confidence (12wk)",
+    thumbLabel: "Neural Pathway Visualizer",
+    bgImage: "https://images.unsplash.com/photo-1677442136019-21780ecad995?w=600&q=70",
+  },
+  {
+    id: "port", tag: "05 — MARITIME", title: "The Port",
+    desc: "PortMiami logistics intelligence. Cruise and cargo analytics, vessel tracking, throughput metrics, and economic impact data.",
+    accent: "#3b9eff", status: "TRACKING", source: "PortMiami API", updated: "12 min ago",
+    url: "#", linkLabel: "View Data",
+    stats: [{ label: "Vessels", value: "47" }, { label: "TEU Today", value: "8,320" }, { label: "Revenue", value: "$2.1M" }],
+    bars: [55, 68, 72, 80, 64, 76, 88, 58, 82, 70, 90, 74], barLabel: "Cargo Volume (12mo)",
+    thumbLabel: "Maritime Traffic Overview",
+    bgImage: "https://images.unsplash.com/photo-1559827260-dc66d52bef19?w=600&q=70",
+  },
+];
+
+// ═══════════════════════════════════════════════════════
+// INTRO SEQUENCE
+// ═══════════════════════════════════════════════════════
+const IntroSequence = ({ onComplete }) => {
+  const [phase, setPhase] = useState(0);
+  // 0=black, 1=glitch logo, 2=subtitle types in, 3=scanline wipe, 4=done
+
+  useEffect(() => {
+    const timers = [
+      setTimeout(() => setPhase(1), 300),
+      setTimeout(() => setPhase(2), 1600),
+      setTimeout(() => setPhase(3), 2800),
+      setTimeout(() => { setPhase(4); onComplete(); }, 3600),
+    ];
+    return () => timers.forEach(clearTimeout);
+  }, [onComplete]);
+
+  if (phase === 4) return null;
+
+  return (
+    <div style={{
+      position: "fixed", inset: 0, zIndex: 9999, background: "#06060e",
+      display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
+      transition: "opacity 0.6s ease",
+      opacity: phase === 3 ? 0 : 1,
+    }}>
+      {/* Scanline wipe */}
+      {phase >= 3 && (
+        <div style={{
+          position: "absolute", top: 0, left: 0, right: 0,
+          height: "100%", background: ACCENT, opacity: 0.08,
+          animation: "wipeDown 0.8s ease-out forwards",
+        }} />
+      )}
+
+      {/* Glitch MIA logo */}
+      {phase >= 1 && (
+        <div style={{ position: "relative" }}>
+          <div style={{
+            fontFamily: "'Instrument Sans', sans-serif",
+            fontSize: 72, fontWeight: 800, color: "#fff",
+            letterSpacing: -2, lineHeight: 1, position: "relative",
+            animation: phase === 1 ? "glitchIn 0.4s ease-out forwards" : "none",
+          }}>
+            {/* Glitch layers */}
+            <span style={{
+              position: "absolute", top: 0, left: 0,
+              color: "#66f5f0", clipPath: "inset(10% 0 60% 0)",
+              animation: phase === 1 ? "glitchR 0.3s steps(3) 3" : "none",
+            }}>M.I.A.</span>
+            <span style={{
+              position: "absolute", top: 0, left: 0,
+              color: "#00e0d0", clipPath: "inset(50% 0 10% 0)",
+              animation: phase === 1 ? "glitchL 0.3s steps(3) 3" : "none",
+            }}>M.I.A.</span>
+            M.I.A.
+          </div>
+        </div>
+      )}
+
+      {/* Subtitle typewriter */}
+      {phase >= 2 && (
+        <div style={{
+          fontFamily: "'DM Mono', monospace", fontSize: 11,
+          letterSpacing: 5, color: ACCENT, marginTop: 16, opacity: 0.8,
+          animation: "typeIn 0.6s steps(28) forwards",
+          overflow: "hidden", whiteSpace: "nowrap",
+          borderRight: `2px solid ${ACCENT}`,
+          width: 0,
+          animationFillMode: "forwards",
+        }}>
+          MIAMI INTELLIGENCE AGGREGATOR
+        </div>
+      )}
+
+      {/* Loading bar */}
+      {phase >= 1 && (
+        <div style={{
+          position: "absolute", bottom: 80, left: "20%", right: "20%",
+          height: 2, background: "#1a1a2a", borderRadius: 1, overflow: "hidden",
+        }}>
+          <div style={{
+            height: "100%", background: ACCENT,
+            animation: "loadBar 2.5s ease-out forwards",
+            borderRadius: 1,
+          }} />
+        </div>
+      )}
+
+      {phase >= 1 && (
+        <div style={{
+          position: "absolute", bottom: 56,
+          fontFamily: "'DM Mono', monospace", fontSize: 9,
+          letterSpacing: 3, color: "#444",
+          animation: "fadeUp 0.5s ease forwards",
+        }}>
+          ESTABLISHING SECURE CONNECTION...
+        </div>
+      )}
+    </div>
+  );
+};
+
+// ═══════════════════════════════════════════════════════
+// MINI COMPONENTS
+// ═══════════════════════════════════════════════════════
+const MiniBarChart = ({ data, accent, label }) => {
+  const max = Math.max(...data);
+  return (
+    <div style={{ marginBottom: 2 }}>
+      <div style={{
+        fontFamily: "'DM Mono', monospace", fontSize: 10, color: "#999",
+        marginBottom: 6, letterSpacing: 1.5, textTransform: "uppercase",
+      }}>{label}</div>
+      <div style={{ display: "flex", alignItems: "flex-end", gap: 3, height: 44 }}>
+        {data.map((v, i) => (
+          <div key={i} style={{
+            flex: 1, height: `${(v / max) * 100}%`, minWidth: 0,
+            background: `linear-gradient(to top, ${accent}, ${accent}55)`,
+            borderRadius: "2px 2px 0 0",
+          }} />
+        ))}
+      </div>
+      <div style={{ height: 1, background: "#222", marginTop: 2 }} />
+    </div>
+  );
+};
+
+const ThumbPhoto = ({ label, accent, bgImage }) => (
+  <div style={{
+    width: "100%", height: 150, borderRadius: 10, overflow: "hidden",
+    position: "relative", marginBottom: 14, border: "1px solid #252535",
+  }}>
+    <img src={bgImage} alt="" style={{
+      position: "absolute", inset: 0, width: "100%", height: "100%",
+      objectFit: "cover", filter: "brightness(0.35) saturate(0.7)",
+    }} onError={e => { e.target.style.display = "none"; }} />
+    <div style={{
+      position: "absolute", inset: 0,
+      background: `linear-gradient(180deg, ${accent}08 0%, rgba(10,10,18,0.7) 100%)`,
+    }} />
+    <div style={{
+      position: "absolute", inset: 0, opacity: 0.12,
+      backgroundImage: "linear-gradient(#fff 1px, transparent 1px), linear-gradient(90deg, #fff 1px, transparent 1px)",
+      backgroundSize: "28px 28px",
+    }} />
+    <svg viewBox="0 0 300 60" preserveAspectRatio="none" style={{
+      position: "absolute", bottom: 0, left: 0, width: "100%", height: 60,
+    }}>
+      <defs>
+        <linearGradient id={`g-${label}`} x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor={accent} stopOpacity="0.25" />
+          <stop offset="100%" stopColor={accent} stopOpacity="0" />
+        </linearGradient>
+      </defs>
+      <path d="M0,45 Q30,35 60,38 T120,25 T180,30 T240,15 T300,22 V60 H0 Z" fill={`url(#g-${label})`} />
+      <path d="M0,45 Q30,35 60,38 T120,25 T180,30 T240,15 T300,22" fill="none" stroke={accent} strokeWidth="1.5" opacity="0.6" />
+    </svg>
+    <div style={{
+      position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center",
+    }}>
+      <span style={{
+        fontFamily: "'DM Mono', monospace", fontSize: 11, color: "#ccc",
+        letterSpacing: 1, padding: "4px 12px", borderRadius: 4,
+        background: "rgba(0,0,0,0.4)", backdropFilter: "blur(4px)",
+      }}>[{label}]</span>
+    </div>
+  </div>
+);
+
+const StatRow = ({ stats }) => (
+  <div style={{
+    display: "flex", gap: 0, marginBottom: 14, borderRadius: 8,
+    overflow: "hidden", border: "1px solid #1e1e2e",
+  }}>
+    {stats.map((s, i) => (
+      <div key={i} style={{
+        flex: 1, padding: "10px 6px", background: "#0e0e18",
+        borderRight: i < stats.length - 1 ? "1px solid #1e1e2e" : "none",
+        textAlign: "center",
+      }}>
+        <div style={{
+          fontFamily: "'Instrument Sans', sans-serif", fontSize: 19,
+          fontWeight: 700, color: "#fff", lineHeight: 1.2,
+        }}>{s.value}</div>
+        <div style={{
+          fontFamily: "'DM Mono', monospace", fontSize: 8, color: "#777",
+          letterSpacing: 1.5, marginTop: 3, textTransform: "uppercase",
+        }}>{s.label}</div>
+      </div>
+    ))}
+  </div>
+);
+
+const NavBtn = ({ children, onClick }) => (
+  <button onClick={onClick} style={{
+    flex: 1, padding: "11px 0", background: "#161622",
+    border: "1px solid #2a2a3a", borderRadius: 8,
+    fontFamily: "'DM Mono', monospace", fontSize: 11, fontWeight: 500,
+    letterSpacing: 2, color: "#bbb", cursor: "pointer", transition: "all 0.25s",
+  }}
+    onMouseEnter={e => { e.currentTarget.style.background = "#1e1e30"; e.currentTarget.style.borderColor = "#444"; e.currentTarget.style.color = "#fff"; }}
+    onMouseLeave={e => { e.currentTarget.style.background = "#161622"; e.currentTarget.style.borderColor = "#2a2a3a"; e.currentTarget.style.color = "#bbb"; }}
+  >{children}</button>
+);
+
+// ═══════════════════════════════════════════════════════
+// COVER PAGE — Redesigned
+// ═══════════════════════════════════════════════════════
+const CoverPage = ({ onNext }) => {
+  const [tick, setTick] = useState(0);
+  useEffect(() => {
+    const iv = setInterval(() => setTick(t => t + 1), 3000);
+    return () => clearInterval(iv);
+  }, []);
+
+  return (
+    <div style={{
+      flex: 1, display: "flex", flexDirection: "column",
+      position: "relative", overflow: "hidden", height: "100%",
+    }}>
+      {/* Background Miami photo */}
+      <div style={{ position: "absolute", inset: 0, borderRadius: 14, overflow: "hidden" }}>
+        <img
+          src="https://images.unsplash.com/photo-1533106497176-45ae19e68ba2?w=800&q=60"
+          alt="" style={{
+            width: "100%", height: "100%", objectFit: "cover",
+            filter: "brightness(0.18) saturate(0.5)",
+          }}
+          onError={e => { e.target.style.display = "none"; }}
+        />
+        {/* Gradient overlays */}
+        <div style={{
+          position: "absolute", inset: 0,
+          background: "linear-gradient(180deg, rgba(17,17,24,0.6) 0%, rgba(17,17,24,0.95) 70%, #111118 100%)",
+        }} />
+        <div style={{
+          position: "absolute", inset: 0,
+          background: `radial-gradient(ellipse at 50% 35%, ${ACCENT}06, transparent 65%)`,
+        }} />
+      </div>
+
+      {/* Animated grid */}
+      <div style={{
+        position: "absolute", inset: 0, borderRadius: 14, overflow: "hidden",
+        opacity: 0.06,
+        backgroundImage: `linear-gradient(${ACCENT} 1px, transparent 1px), linear-gradient(90deg, ${ACCENT} 1px, transparent 1px)`,
+        backgroundSize: "40px 40px",
+      }} />
+
+      {/* Content */}
+      <div style={{
+        flex: 1, display: "flex", flexDirection: "column",
+        alignItems: "center", justifyContent: "center",
+        textAlign: "center", position: "relative", zIndex: 2,
+        padding: "0 20px",
+      }}>
+        {/* Top classification badge */}
+        <div style={{
+          fontFamily: "'DM Mono', monospace", fontSize: 9,
+          letterSpacing: 5, color: ACCENT, marginBottom: 32,
+          padding: "5px 14px", borderRadius: 4,
+          border: `1px solid ${ACCENT}30`, background: `${ACCENT}08`,
+        }}>
+          ● FIELD INTELLIGENCE SYSTEM
+        </div>
+
+        {/* MIA Logo with persistent subtle glitch */}
+        <div style={{ position: "relative", marginBottom: 8 }}>
+          <div style={{
+            fontFamily: "'Instrument Sans', sans-serif",
+            fontSize: 64, fontWeight: 800, color: "#fff",
+            letterSpacing: -1, lineHeight: 1,
+            animation: "subtleGlitch 4s ease-in-out infinite",
+          }}>
+            {/* Glitch echoes */}
+            <span style={{
+              position: "absolute", top: 0, left: 0, color: "#66f5f0",
+              clipPath: "inset(15% 0 70% 0)", opacity: 0.4,
+              animation: "microGlitchR 6s steps(2) infinite",
+            }}>M.I.A.</span>
+            <span style={{
+              position: "absolute", top: 0, left: 0, color: ACCENT,
+              clipPath: "inset(65% 0 15% 0)", opacity: 0.4,
+              animation: "microGlitchL 6s steps(2) infinite",
+            }}>M.I.A.</span>
+            M.I.A.
+          </div>
+        </div>
+
+        {/* Subtitle */}
+        <div style={{
+          fontFamily: "'Instrument Sans', sans-serif", fontSize: 13,
+          fontWeight: 500, color: "#ccc", letterSpacing: 5,
+          textTransform: "uppercase", marginBottom: 36,
+        }}>
+          Miami Intelligence Aggregator
+        </div>
+
+        {/* Horizontal rule with accent */}
+        <div style={{
+          width: 120, height: 1, marginBottom: 28,
+          background: `linear-gradient(90deg, transparent, ${ACCENT}66, transparent)`,
+        }} />
+
+        {/* Feed list */}
+        <div style={{
+          display: "flex", flexDirection: "column", gap: 6,
+          width: "100%", maxWidth: 260, marginBottom: 32,
+        }}>
+          {FEEDS.map((f, i) => (
+            <div key={f.id} style={{
+              display: "flex", alignItems: "center", gap: 10,
+              padding: "6px 0",
+              opacity: tick % FEEDS.length === i ? 1 : 0.5,
+              transition: "opacity 0.5s ease",
+            }}>
+              <div style={{
+                width: 8, height: 8, borderRadius: "50%",
+                background: f.accent,
+                boxShadow: tick % FEEDS.length === i ? `0 0 8px ${f.accent}88` : "none",
+                transition: "box-shadow 0.5s ease",
+              }} />
+              <div style={{
+                flex: 1, height: 3, borderRadius: 2,
+                background: `linear-gradient(90deg, ${f.accent}88, ${f.accent}22)`,
+              }} />
+              <div style={{
+                fontFamily: "'DM Mono', monospace", fontSize: 9,
+                letterSpacing: 2, color: "#bbb",
+              }}>
+                {f.label}
+              </div>
+            </div>
+          ))}
+        </div>
+
+        {/* Status line */}
+        <div style={{
+          fontFamily: "'DM Mono', monospace", fontSize: 10,
+          color: "#888", letterSpacing: 2, marginBottom: 28,
+        }}>
+          5 FEEDS OPERATIONAL · MIAMI-DADE
+        </div>
+
+        {/* CTA */}
+        <button
+          onClick={onNext}
+          style={{
+            padding: "15px 44px", background: ACCENT,
+            border: "none", borderRadius: 10,
+            fontFamily: "'Instrument Sans', sans-serif", fontSize: 14,
+            fontWeight: 700, letterSpacing: 2, color: "#0a0a12",
+            cursor: "pointer", transition: "all 0.25s",
+            textTransform: "uppercase",
+            boxShadow: `0 0 30px ${ACCENT}25`,
+          }}
+          onMouseEnter={e => { e.currentTarget.style.transform = "translateY(-2px)"; e.currentTarget.style.boxShadow = `0 4px 40px ${ACCENT}40`; }}
+          onMouseLeave={e => { e.currentTarget.style.transform = "translateY(0)"; e.currentTarget.style.boxShadow = `0 0 30px ${ACCENT}25`; }}
+        >
+          ACCESS FEEDS ↓
+        </button>
+      </div>
+    </div>
+  );
+};
+
+// ═══════════════════════════════════════════════════════
+// CARD
+// ═══════════════════════════════════════════════════════
+const Card = ({ page, index, currentPage, onNext, onPrev, total }) => {
+  const isActive = index === currentPage;
+  const isFlipped = index < currentPage;
+  const isBehind = index > currentPage;
+  const depth = isBehind ? index - currentPage : 0;
+
+  return (
+    <div style={{
+      position: "absolute", width: "100%", height: "100%",
+      transformOrigin: "top center",
+      transition: "all 0.65s cubic-bezier(0.4, 0, 0.2, 1)",
+      transform: isFlipped
+        ? "rotateX(-95deg) translateY(-10px)"
+        : `translateY(${depth * 4}px) scale(${1 - depth * 0.018})`,
+      opacity: isFlipped ? 0 : isBehind ? Math.max(0.2, 1 - depth * 0.3) : 1,
+      zIndex: total - index,
+      pointerEvents: isActive ? "auto" : "none",
+    }}>
+      <div style={{
+        width: "100%", height: "100%", background: "#111118",
+        borderRadius: 16, border: "1px solid #1e1e2e",
+        padding: page.isCover ? 0 : "18px 16px 14px",
+        display: "flex", flexDirection: "column",
+        overflow: "hidden", position: "relative",
+        boxShadow: isActive
+          ? "0 20px 60px rgba(0,0,0,0.5)"
+          : "0 4px 20px rgba(0,0,0,0.3)",
+      }}>
+        {/* Top accent bar */}
+        <div style={{
+          position: "absolute", top: 0, left: 24, right: 24, height: 2,
+          borderRadius: "0 0 2px 2px", zIndex: 3,
+          background: page.isCover ? ACCENT : page.accent, opacity: 0.6,
+        }} />
+
+        {page.isCover ? (
+          <CoverPage onNext={onNext} />
+        ) : (
+          <>
+            <div style={{
+              display: "flex", justifyContent: "space-between",
+              alignItems: "flex-start", marginBottom: 8,
+            }}>
+              <div style={{
+                fontFamily: "'DM Mono', monospace", fontSize: 10,
+                letterSpacing: 2, color: "#999",
+              }}>{page.tag}</div>
+              <div style={{
+                fontFamily: "'DM Mono', monospace", fontSize: 9,
+                letterSpacing: 1, color: page.accent,
+                padding: "3px 10px", borderRadius: 5,
+                background: `${page.accent}15`, border: `1px solid ${page.accent}30`,
+              }}>● {page.status}</div>
+            </div>
+
+            <div style={{
+              fontFamily: "'Instrument Sans', sans-serif", fontSize: 28,
+              fontWeight: 700, color: "#fff", lineHeight: 1.15,
+              marginBottom: 6, letterSpacing: -0.5,
+            }}>{page.title}</div>
+
+            <div style={{
+              fontFamily: "'Instrument Sans', sans-serif", fontSize: 13,
+              lineHeight: 1.5, color: "#bbb", marginBottom: 12,
+            }}>{page.desc}</div>
+
+            <ThumbPhoto label={page.thumbLabel} accent={page.accent} bgImage={page.bgImage} />
+            <StatRow stats={page.stats} />
+            <MiniBarChart data={page.bars} accent={page.accent} label={page.barLabel} />
+
+            <div style={{
+              display: "flex", justifyContent: "space-between",
+              fontFamily: "'DM Mono', monospace", fontSize: 9,
+              color: "#777", letterSpacing: 1, margin: "8px 0 12px",
+            }}>
+              <span>SRC: {page.source}</span>
+              <span>{page.updated}</span>
+            </div>
+
+            <a href={page.url} target="_blank" rel="noopener noreferrer" style={{
+              display: "flex", alignItems: "center", justifyContent: "center",
+              padding: "14px 0", background: page.accent, borderRadius: 10,
+              fontFamily: "'Instrument Sans', sans-serif", fontSize: 14,
+              fontWeight: 700, letterSpacing: 1.5, color: "#0a0a12",
+              textDecoration: "none", textTransform: "uppercase",
+              transition: "all 0.25s", cursor: "pointer",
+            }}
+              onMouseEnter={e => { e.currentTarget.style.opacity = "0.85"; e.currentTarget.style.transform = "translateY(-1px)"; }}
+              onMouseLeave={e => { e.currentTarget.style.opacity = "1"; e.currentTarget.style.transform = "translateY(0)"; }}
+            >{page.linkLabel}</a>
+
+            <div style={{ display: "flex", gap: 8, marginTop: 10 }}>
+              {index > 1 && <NavBtn onClick={onPrev}>← PREV</NavBtn>}
+              {index < total - 1 ? (
+                <NavBtn onClick={onNext}>NEXT →</NavBtn>
+              ) : (
+                <NavBtn onClick={() => onNext()}>↑ COVER</NavBtn>
+              )}
+            </div>
+          </>
+        )}
+      </div>
+    </div>
+  );
+};
+
+// ═══════════════════════════════════════════════════════
+// MAIN
+// ═══════════════════════════════════════════════════════
+export default function MIA() {
+  const [page, setPage] = useState(0);
+  const [introComplete, setIntroComplete] = useState(false);
+  const touchY = useRef(null);
+  const wheelLock = useRef(null);
+
+  const next = useCallback(() => setPage(p => p < PAGES.length - 1 ? p + 1 : 0), []);
+  const prev = useCallback(() => setPage(p => p > 0 ? p - 1 : p), []);
+
+  const onTouchStart = e => { touchY.current = e.touches[0].clientY; };
+  const onTouchEnd = e => {
+    if (touchY.current === null) return;
+    const d = touchY.current - e.changedTouches[0].clientY;
+    if (d > 40) next(); if (d < -40) prev();
+    touchY.current = null;
+  };
+  const onWheel = e => {
+    if (wheelLock.current) return;
+    wheelLock.current = setTimeout(() => { wheelLock.current = null; }, 700);
+    if (e.deltaY > 15) next(); if (e.deltaY < -15) prev();
+  };
+
+  return (
+    <div style={{
+      minHeight: "100vh", background: "#09090f",
+      display: "flex", flexDirection: "column",
+      alignItems: "center", justifyContent: "center",
+      padding: "16px", position: "relative", overflow: "hidden",
+      userSelect: "none",
+    }}>
+      <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@300;400;500&family=Instrument+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+
+      {/* Intro */}
+      {!introComplete && <IntroSequence onComplete={() => setIntroComplete(true)} />}
+
+      {/* Dot texture */}
+      <div style={{
+        position: "fixed", inset: 0, pointerEvents: "none", opacity: 0.25,
+        backgroundImage: "radial-gradient(circle at 1px 1px, #ffffff06 1px, transparent 0)",
+        backgroundSize: "32px 32px",
+      }} />
+
+      {/* Top pill nav */}
+      <div style={{
+        position: "fixed", top: 14, left: 0, right: 0,
+        display: "flex", justifyContent: "center", alignItems: "center",
+        gap: 6, zIndex: 100,
+        opacity: introComplete ? 1 : 0, transition: "opacity 0.5s ease",
+      }}>
+        {PAGES.map((p, i) => (
+          <button key={p.id} onClick={() => setPage(i)} style={{
+            width: i === page ? 26 : 8, height: 5, borderRadius: 3,
+            border: "none", padding: 0, cursor: "pointer",
+            background: i === page ? (p.isCover ? ACCENT : p.accent) : i < page ? "#444" : "#1e1e2a",
+            transition: "all 0.4s ease",
+          }} />
+        ))}
+      </div>
+
+      {/* Card stack */}
+      <div
+        onTouchStart={onTouchStart} onTouchEnd={onTouchEnd} onWheel={onWheel}
+        style={{
+          perspective: 1200, position: "relative",
+          width: "100%", maxWidth: 400, height: 720,
+          opacity: introComplete ? 1 : 0,
+          transform: introComplete ? "translateY(0)" : "translateY(20px)",
+          transition: "all 0.8s ease 0.2s",
+        }}
+      >
+        {PAGES.map((p, i) => (
+          <Card key={p.id} page={p} index={i} currentPage={page}
+            onNext={i === PAGES.length - 1 ? () => setPage(0) : next}
+            onPrev={prev} total={PAGES.length}
+          />
+        ))}
+      </div>
+
+      <style>{`
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        html, body { background: #09090f; }
+
+        @keyframes glitchIn {
+          0% { opacity: 0; transform: translateY(10px) skewX(-5deg); }
+          30% { opacity: 1; transform: translateY(-2px) skewX(3deg); }
+          50% { transform: translateY(1px) skewX(-1deg); }
+          100% { transform: translateY(0) skewX(0deg); }
+        }
+        @keyframes glitchR {
+          0% { transform: translateX(0); }
+          33% { transform: translateX(4px); }
+          66% { transform: translateX(-2px); }
+          100% { transform: translateX(0); }
+        }
+        @keyframes glitchL {
+          0% { transform: translateX(0); }
+          33% { transform: translateX(-4px); }
+          66% { transform: translateX(3px); }
+          100% { transform: translateX(0); }
+        }
+        @keyframes subtleGlitch {
+          0%, 92%, 100% { transform: translate(0); }
+          93% { transform: translate(2px, -1px); }
+          94% { transform: translate(-2px, 1px); }
+          95% { transform: translate(1px, 0); }
+          96% { transform: translate(0); }
+        }
+        @keyframes microGlitchR {
+          0%, 88%, 92%, 100% { transform: translateX(0); opacity: 0; }
+          89% { transform: translateX(3px); opacity: 0.5; }
+          91% { transform: translateX(-2px); opacity: 0.3; }
+        }
+        @keyframes microGlitchL {
+          0%, 85%, 90%, 100% { transform: translateX(0); opacity: 0; }
+          86% { transform: translateX(-3px); opacity: 0.5; }
+          88% { transform: translateX(2px); opacity: 0.3; }
+        }
+        @keyframes typeIn {
+          from { width: 0; }
+          to { width: 320px; }
+        }
+        @keyframes loadBar {
+          0% { width: 0%; }
+          60% { width: 70%; }
+          100% { width: 100%; }
+        }
+        @keyframes fadeUp {
+          from { opacity: 0; transform: translateY(8px); }
+          to { opacity: 1; transform: translateY(0); }
+        }
+        @keyframes wipeDown {
+          from { transform: scaleY(0); transform-origin: top; }
+          to { transform: scaleY(1); transform-origin: top; }
+        }
+      `}</style>
+    </div>
+  );
+}
